@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: {{ .Values.tenantNamespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        version: v1
+    spec:   
+      initContainers:
+      - name: keycloak-tenant-setup
+        image: powerpilotregistry.azurecr.io/keycloaktenantsetup:3438     
+        envFrom:
+        - secretRef:
+            name: {{ .Release.Name }}-secret           
+      containers:
+      - name: auth-service
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}        
+        ports:
+        - name: grpc
+          containerPort: {{ .Values.service.port }}
+        - name: http
+          containerPort: {{ .Values.service.httpPort }}
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: {{ .Values.service.httpPort }}
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: {{ .Values.service.httpPort }}
+          initialDelaySeconds: 20
+          periodSeconds: 20
+          timeoutSeconds: 2          
+        envFrom:
+        - secretRef:
+            name: {{ .Release.Name }}-secret
+
+
+          

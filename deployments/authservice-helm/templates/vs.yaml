@@ -1,0 +1,21 @@
+apiVersion: networking.istio.io/{{ .Values.istioApiVersion }}
+kind: VirtualService
+metadata:
+  name: auth-service-vs
+  namespace: {{ .Values.tenantNamespace }}
+spec:
+  gateways:
+  - {{ .Values.gateway }}
+  hosts:
+  - auth.{{ .Values.tenantName }}.powerpilot.nz
+  http:
+  - match:
+    - uri: 
+        prefix: /token
+    - uri:
+        prefix: /datatoken
+    route:
+    - destination:
+        host: auth-service
+        port:
+          number: {{ .Values.service.httpPort }}

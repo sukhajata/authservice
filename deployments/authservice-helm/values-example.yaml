@@ -1,0 +1,39 @@
+
+replicaCount: 1
+image:
+  repository: authservice
+  tag: dev-3446
+
+tenantName: test
+tenantNamespace: test
+gateway: istio-system/istio-test-ingressgateway
+istioApiVersion: v1beta1
+
+service:
+  port: 9030
+  httpPort: 2000
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+env:
+  authServicePort: "9030"
+  httpPort: "2000"
+  loggerServiceAddress: "logger-service:9031"
+  rolePowerpilotAdmin: "powerpilot-admin"
+  rolePowerpilotInstaller: "powerpilot-installer"
+  rolePowerpilotProsumer: "powerpilot-prosumer"
+  rolePowerpilotSuperuser: "powerpilot-superuser"
+  serviceKey: "test"
+  dataServiceSecret: "test"
+
+  keycloakUsername: "keycloak"
+  keycloakUrl: "http://keycloak-http.dev.svc/auth/"
+  keycloakPassword: "test"
+  realmId: "test"
+    
