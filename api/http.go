@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/sukhajata/authservice/internal/core"
 	"github.com/sukhajata/devicetwin/pkg/loggerhelper"
+	pbLogger "github.com/sukhajata/pplogger"
 	"net/http"
 	"strings"
 
@@ -22,25 +23,26 @@ type HTTPServer struct {
 	Live         bool
 }
 
-var (
-	ready = false
-	live  = true
-)
-
 func (s *HTTPServer) readinessHandler(w http.ResponseWriter, r *http.Request) {
-	if !ready {
-		http.Error(w, "Not ready", http.StatusInternalServerError)
+	if !s.Ready {
+		http.Error(w, "not ready", http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "Ready")
+	_, err := fmt.Fprintf(w, "Ready")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (s *HTTPServer) livenessHandler(w http.ResponseWriter, r *http.Request) {
-	if !live {
-		http.Error(w, "Not live", http.StatusInternalServerError)
+	if !s.Live {
+		http.Error(w, "not live", http.StatusInternalServerError)
 		return
 	}
-	fmt.Fprintf(w, "Live")
+	_, err := fmt.Fprintf(w, "Live")
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (s *HTTPServer) getTokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +64,10 @@ func (s *HTTPServer) getTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(tokenResponse.Token))
+	_, err = w.Write([]byte(tokenResponse.Token))
+	if err != nil {
+		s.loggerHelper.LogError("getTokenHandler", err.Error(), pbLogger.ErrorMessage_FATAL)
+	}
 
 }
 
@@ -84,7 +89,10 @@ func (s *HTTPServer) getDataTokenHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Write([]byte(dataToken))
+	_, err = w.Write([]byte(dataToken))
+	if err != nil {
+		s.loggerHelper.LogError("getDataTokenHandler", err.Error(), pbLogger.ErrorMessage_FATAL)
+	}
 
 }
 
@@ -104,7 +112,7 @@ func NewHTTPServer(coreService *core.Service, loggerHelper loggerhelper.Helper, 
 	s := &HTTPServer{
 		coreService:  coreService,
 		loggerHelper: loggerHelper,
-		Ready:        true,
+		Ready:        false,
 		Live:         true,
 	}
 	c := cors.New(cors.Options{

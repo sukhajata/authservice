@@ -89,7 +89,7 @@ func main() {
 	grpcAuthServer := api.NewGRPCServer(coreService)
 	pb.RegisterAuthServiceServer(grpcServer, grpcAuthServer)
 
-	// give HTTP server time to start up before declaring ready
+	// give HTTP server time to start before declaring ready
 	go func() {
 		time.Sleep(time.Second * 2)
 		httpServer.Ready = true

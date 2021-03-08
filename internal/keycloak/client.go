@@ -20,14 +20,25 @@ type HTTPClient interface {
 	PostForm(url string, data url.Values) (*http.Response, error)
 }
 
-type Client struct {
+type Client interface {
+	GetVerifyKey(username string, password string) (*rsa.PublicKey, error)
+	GetKeycloakToken(username string, password string, clientID string, realm string) (string, error)
+	GetPublicKey(adminToken string) (string, error)
+	GetRoleID(realmID string, role string, token string) (string, error)
+	GetKeycloakUserID(realmID string, username string, token string) (string, error)
+	CreateKeycloakUser(realmID string, username string, email string, password string, token string) (string, error)
+	AddRoleToKeycloakUser(realmID string, userID string, role Role, token string) error
+	DeleteKeycloakUser(userID string, adminToken string) error
+}
+
+type client struct {
 	keycloakURL string
 	realmID     string
 	httpClient  HTTPClient
 }
 
-func NewClient(keycloakURL string, realmID string, httpClient HTTPClient) *Client {
-	return &Client{
+func NewClient(keycloakURL string, realmID string, httpClient HTTPClient) *client {
+	return &client{
 		keycloakURL: keycloakURL,
 		realmID:     realmID,
 		httpClient:  httpClient,
@@ -69,7 +80,7 @@ type Key struct {
 	Algorithm string `json:"algorithm"`
 }
 
-func (c *Client) GetVerifyKey(username string, password string) (*rsa.PublicKey, error) {
+func (c *client) GetVerifyKey(username string, password string) (*rsa.PublicKey, error) {
 	// get the keycloak public key
 	// keep trying to connect
 	numRetries := 0
@@ -87,7 +98,7 @@ func (c *Client) GetVerifyKey(username string, password string) (*rsa.PublicKey,
 		if err != nil {
 			errorhelper.StartUpError(err)
 			numRetries++
-			if numRetries > 5 {
+			if numRetries > 10 {
 				return nil, err
 			}
 			continue
@@ -108,7 +119,7 @@ func (c *Client) GetVerifyKey(username string, password string) (*rsa.PublicKey,
 }
 
 // GetKeycloakToken - get a token from keycloak
-func (c *Client) GetKeycloakToken(username string, password string, clientID string, realm string) (string, error) {
+func (c *client) GetKeycloakToken(username string, password string, clientID string, realm string) (string, error) {
 	form := url.Values{}
 	form.Add("username", username)
 	form.Add("password", password)
@@ -152,7 +163,7 @@ func (c *Client) GetKeycloakToken(username string, password string, clientID str
 }
 
 // GetPublicKey - get the keycloak public key
-func (c *Client) GetPublicKey(adminToken string) (string, error) {
+func (c *client) GetPublicKey(adminToken string) (string, error) {
 	api := fmt.Sprintf("%sadmin/realms/%s/keys", c.keycloakURL, c.realmID)
 	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
@@ -194,7 +205,7 @@ func (c *Client) GetPublicKey(adminToken string) (string, error) {
 }
 
 // GetRoleID - get the id for a given role
-func (c *Client) GetRoleID(realmID string, role string, token string) (string, error) {
+func (c *client) GetRoleID(realmID string, role string, token string) (string, error) {
 	api := fmt.Sprintf("%sadmin/realms/%s/roles/%s", c.keycloakURL, realmID, role)
 	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
@@ -230,7 +241,7 @@ func (c *Client) GetRoleID(realmID string, role string, token string) (string, e
 }
 
 // GetKeycloakUserID - get the id for a user
-func (c *Client) GetKeycloakUserID(realmID string, username string, token string) (string, error) {
+func (c *client) GetKeycloakUserID(realmID string, username string, token string) (string, error) {
 	api := fmt.Sprintf("%sadmin/realms/%s/users?username=%s", c.keycloakURL, realmID, username)
 	req, err := http.NewRequest("GET", api, nil)
 	if err != nil {
@@ -274,7 +285,7 @@ func (c *Client) GetKeycloakUserID(realmID string, username string, token string
 }
 
 // CreateKeycloakUser - create a keycloak user
-func (c *Client) CreateKeycloakUser(realmID string, username string, email string, password string, token string) (string, error) {
+func (c *client) CreateKeycloakUser(realmID string, username string, email string, password string, token string) (string, error) {
 	api := fmt.Sprintf("%sadmin/realms/%s/users", c.keycloakURL, realmID)
 
 	creds := make([]Credentials, 1)
@@ -331,7 +342,7 @@ func (c *Client) CreateKeycloakUser(realmID string, username string, email strin
 }
 
 // AddRoleToKeycloakUser - add the given role to the given user
-func (c *Client) AddRoleToKeycloakUser(realmID string, userID string, role Role, token string) error {
+func (c *client) AddRoleToKeycloakUser(realmID string, userID string, role Role, token string) error {
 	roles := make([]Role, 1)
 	roles[0] = role
 	jsonBytes, err := json.Marshal(roles)
@@ -367,7 +378,7 @@ func (c *Client) AddRoleToKeycloakUser(realmID string, userID string, role Role,
 }
 
 // DeleteKeycloakUser deletes a user from keycloak
-func (c *Client) DeleteKeycloakUser(userID string, adminToken string) error {
+func (c *client) DeleteKeycloakUser(userID string, adminToken string) error {
 	api := fmt.Sprintf("%sadmin/realms/%s/users/%s", c.keycloakURL, c.realmID, userID)
 	request, err := http.NewRequest("DELETE", api, nil)
 	if err != nil {

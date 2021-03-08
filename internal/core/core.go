@@ -12,7 +12,7 @@ import (
 )
 
 type Service struct {
-	keycloakClient    *keycloak.Client
+	keycloakClient    keycloak.Client
 	realmID           string
 	keycloakUsername  string
 	keycloakPassword  string
@@ -26,7 +26,7 @@ type Service struct {
 }
 
 func NewService(
-	keycloakClient *keycloak.Client,
+	keycloakClient keycloak.Client,
 	realmID string,
 	keycloakUsername string,
 	keycloakPassword string,
